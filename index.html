@@ -2,162 +2,181 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>微发酵苹果汁风味模拟器</title>
+    <title>微发酵苹果混酿模拟器 - 不专业版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f9f9f9; color: #333; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #2d5a27; }
-        .config-section { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
-        .apple-item { margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 8px; }
-        .apple-item label { font-weight: bold; display: block; margin-bottom: 5px; }
-        input[type="range"] { width: 100%; accent-color: #4CAF50; }
-        .result-section { background: #f0f7ef; padding: 20px; border-radius: 10px; }
-        #description { font-style: italic; color: #555; margin-top: 10px; line-height: 1.6; }
-        .stats-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; background: #2d5a27; color: white; font-size: 14px; margin-right: 5px; }
-        canvas { max-width: 100%; margin-top: 20px; }
-        .warning { color: #d9534f; font-size: 12px; margin-top: 5px; display: none; }
+        body { font-family: 'PingFang SC', sans-serif; background: #f0f2f0; color: #333; padding: 10px; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #1a4314; font-size: 24px; }
+        .layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 25px; }
+        .card { background: #fff; border: 1px solid #eee; padding: 20px; border-radius: 12px; }
+        .apple-box { margin-bottom: 18px; }
+        .apple-info { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+        .tag { font-size: 11px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; }
+        input[type="range"] { width: 100%; accent-color: #4CAF50; cursor: grab; }
+        .ferment-section { background: #fffde7; border: 1px dashed #fbc02d; padding: 15px; border-radius: 10px; margin-top: 15px; }
+        #radarChart { max-height: 350px; }
+        .desc-box { margin-top: 15px; line-height: 1.6; font-size: 14px; color: #444; border-left: 4px solid #4CAF50; padding-left: 15px; }
+        .data-badge { background: #1a4314; color: white; padding: 4px 10px; border-radius: 5px; font-size: 13px; margin-right: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🍎 苹果混酿风味实验室</h1>
-    <p style="text-align: center; color: #666;">自由调整品种比例，实时观测发酵前后的风味变化</p>
+    <h1>🍎 不专业混酿比例模拟器 (总量锁定 100%)</h1>
+    
+    <div class="layout">
+        <div class="card">
+            <h3 style="margin-top:0">1. 品种配比调取 <small style="color:#666; font-weight:normal">(任一调整，整体平衡)</small></h3>
+            <div id="slider-group"></div>
 
-    <div class="config-section">
-        <div class="controls">
-            <h3>1. 品种配比 (总和需为 100%)</h3>
-            <div id="apple-controls"></div>
-            <p id="total-warn" class="warning">⚠️ 当前比例总和不等于 100%，结果可能不准确</p>
-
-            <h3>2. 发酵程度 (发酵深度)</h3>
-            <label>残糖控制 (决定甜度与酒精度)</label>
-            <input type="range" id="ferment-level" min="0" max="100" value="70">
-            <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span>纯果汁 (不发酵)</span>
-                <span>完全发酵 (干型)</span>
+            <div class="ferment-section">
+                <h3 style="margin-top:0">2. 发酵与残糖控制</h3>
+                <label>发酵程度 (0%=纯果汁 | 100%=完全发酵)</label>
+                <input type="range" id="ferment-depth" min="0" max="100" value="60">
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:5px;">
+                    <span>鲜榨果汁 (极甜)</span>
+                    <span>干型苹果酒 (无糖)</span>
+                </div>
             </div>
         </div>
 
-        <div class="result-section">
-            <h3>3. 实时风味画像</h3>
-            <canvas id="flavorChart"></canvas>
+        <div class="card">
+            <h3 style="margin-top:0">3. 风味画像与数据</h3>
+            <canvas id="radarChart"></canvas>
             
-            <div id="results">
-                <p><strong>预测口感描述：</strong></p>
-                <div id="description">请调整比例以查看描述...</div>
-                <hr>
-                <p><strong>残糖计算器：</strong></p>
-                <span class="stats-badge" id="residual-sugar">残糖: -- g/L</span>
-                <span class="stats-badge" id="est-abv">预估酒精度: --%</span>
+            <div style="margin-top:20px;">
+                <span class="data-badge" id="abv-val">预估酒精: 0%</span>
+                <span class="data-badge" id="sugar-val">残糖: 0 g/L</span>
             </div>
+
+            <div class="desc-box" id="flavor-desc">正在分析混合风味...</div>
         </div>
     </div>
 </div>
 
 <script>
-    // 品种数据库 [酸度, 甜度, 结构, 香气调性(0清新-1浓郁), 原始糖度g/L]
-    const appleData = {
-        "澳洲青苹果 (柠檬香)": { acid: 9, sweet: 3, body: 2, aroma: 0.1, sugar: 110 },
-        "粉红佳人 (花果香)": { acid: 7, sweet: 6, body: 4, aroma: 0.2, sugar: 130 },
-        "红富士 (蜂蜜甜)": { acid: 3, sweet: 9, body: 5, aroma: 0.8, sugar: 155 },
-        "嘎啦 (清甜草本)": { acid: 4, sweet: 7, body: 3, aroma: 0.3, sugar: 125 },
-        "黄元帅 (奶油熟香)": { acid: 4, sweet: 8, body: 6, aroma: 0.9, sugar: 140 }
+    // 扩展品种数据库
+    const appleDB = {
+        "海棠果 (野生/极酸涩)": { acid: 10, sweet: 2, body: 10, aroma: 0.9, sugar: 90, tags: "高单宁, 骨架增强" },
+        "澳洲青苹果 (柠檬/爽脆)": { acid: 9, sweet: 3, body: 2, aroma: 0.2, sugar: 110, tags: "柠檬香, 增亮" },
+        "布瑞本 (辛香/骨架)": { acid: 7, sweet: 5, body: 5, aroma: 0.4, sugar: 120, tags: "结构感, 丰富度" },
+        "粉红佳人 (花香/玫瑰)": { acid: 7, sweet: 6, body: 4, aroma: 0.3, sugar: 130, tags: "优雅, 红浆果" },
+        "红富士 (蜂蜜/底蕴)": { acid: 3, sweet: 9, body: 4, aroma: 0.8, sugar: 155, tags: "主基调, 高糖" },
+        "黄元帅 (奶油/熟香)": { acid: 4, sweet: 8, body: 6, aroma: 0.9, sugar: 140, tags: "圆润感, 奶油香" },
+        "嘎啦 (清甜/香草)": { acid: 4, sweet: 7, body: 3, aroma: 0.3, sugar: 125, tags: "清新前调" }
     };
 
+    const names = Object.keys(appleDB);
+    let ratios = names.map((_, i) => i === 0 ? 100 : 0); // 初始：第一个 100%，其余 0%
     let chart;
-    const appleControls = document.getElementById('apple-controls');
 
-    // 初始化滑块
-    Object.keys(appleData).forEach((name, index) => {
+    const sliderGroup = document.getElementById('slider-group');
+
+    // 初始化渲染滑块
+    names.forEach((name, i) => {
         const div = document.createElement('div');
-        div.className = 'apple-item';
-        const startVal = index === 0 ? 100 : 0;
+        div.className = 'apple-box';
         div.innerHTML = `
-            <label>${name} <span id="val-${index}">${startVal}%</span></label>
-            <input type="range" class="apple-slider" data-name="${name}" data-index="${index}" min="0" max="100" value="${startVal}">
+            <div class="apple-info">
+                <span><strong>${name}</strong> <span class="tag">${appleDB[name].tags}</span></span>
+                <span id="label-${i}" style="font-weight:bold; color:#4CAF50">0%</span>
+            </div>
+            <input type="range" class="apple-slider" data-index="${i}" min="0" max="1000" value="${ratios[i] * 10}">
         `;
-        appleControls.appendChild(div);
+        sliderGroup.appendChild(div);
     });
 
-    function update() {
-        let totalRatio = 0;
-        let finalAcid = 0, finalSweet = 0, finalBody = 0, finalAroma = 0, initialSugar = 0;
-        
-        const sliders = document.querySelectorAll('.apple-slider');
-        const fermentLevel = document.getElementById('ferment-level').value / 100;
+    // 核心逻辑：总量锁定算法
+    function handleSlider(e) {
+        const index = parseInt(e.target.dataset.index);
+        const newValue = parseInt(e.target.value) / 10;
+        const oldValue = ratios[index];
+        const delta = newValue - oldValue;
 
-        sliders.forEach(slider => {
-            const ratio = slider.value / 100;
-            const data = appleData[slider.dataset.name];
-            totalRatio += ratio;
-            document.getElementById(`val-${slider.dataset.index}`).innerText = slider.value + '%';
-            
-            finalAcid += data.acid * ratio;
-            finalSweet += data.sweet * ratio;
-            finalBody += data.body * ratio;
-            finalAroma += data.aroma * ratio;
-            initialSugar += data.sugar * ratio;
-        });
+        if (delta === 0) return;
 
-        document.getElementById('total-warn').style.display = Math.abs(totalRatio - 1) > 0.01 ? 'block' : 'none';
+        // 计算其他滑块的总比例
+        const otherTotal = 100 - oldValue;
+        ratios[index] = newValue;
 
-        // 残糖与酒精度计算 (大致算法: 17g/L 糖产生 1% 酒精)
-        const residualSugar = initialSugar * (1 - fermentLevel);
-        const consumedSugar = initialSugar - residualSugar;
-        const abv = consumedSugar / 17;
-        const displaySweetness = finalSweet * (1 - fermentLevel); // 修正发酵后的体感甜度
-
-        document.getElementById('residual-sugar').innerText = `残糖: ${residualSugar.toFixed(1)} g/L`;
-        document.getElementById('est-abv').innerText = `预估酒精度: ${abv.toFixed(1)}% Vol`;
-
-        // 描述逻辑
-        let desc = "";
-        if (finalAcid > 6) desc += "✨ 口感非常**明亮生津**，带有明显的酸质骨架。";
-        else desc += "☁️ 口感**温和圆润**，酸度不明显。";
-
-        if (finalAroma > 0.6) desc += " 重点突出**熟苹果、蜂蜜**的浓郁后调。";
-        else desc += " 散发着**青草、柠檬**般的清新前调。";
-
-        if (residualSugar < 10) desc += " 属于**干型**气泡酒，适合佐餐。";
-        else if (residualSugar < 40) desc += " 属于**半干型**，保留了果汁的愉悦感。";
-        else desc += " **甜感明显**，更接近带气的果汁。";
-
-        document.getElementById('description').innerText = desc;
-
-        updateChart([finalAcid, displaySweetness, finalBody, finalAroma * 10, abv * 2]);
+        if (otherTotal > 0) {
+            // 按比例缩放其他滑块
+            for (let i = 0; i < ratios.length; i++) {
+                if (i !== index) {
+                    ratios[i] = ratios[i] * (1 - delta / otherTotal);
+                }
+            }
+        } else {
+            // 如果之前其他都是0，则平分剩余量
+            const share = (100 - newValue) / (ratios.length - 1);
+            for (let i = 0; i < ratios.length; i++) {
+                if (i !== index) ratios[i] = share;
+            }
+        }
+        updateUI();
     }
 
-    function updateChart(dataValues) {
-        const ctx = document.getElementById('flavorChart').getContext('2d');
-        const labels = ['酸度强度', '残留甜度', '酒体重量', '浓郁度', '酒精质感'];
+    function updateUI() {
+        const sliders = document.querySelectorAll('.apple-slider');
+        const ferment = document.getElementById('ferment-depth').value / 100;
         
+        let finalA = 0, finalS = 0, finalB = 0, finalAr = 0, totalSug = 0;
+
+        ratios.forEach((val, i) => {
+            const v = Math.max(0, val);
+            sliders[i].value = v * 10;
+            document.getElementById(`label-${i}`).innerText = v.toFixed(1) + '%';
+            
+            const d = appleDB[names[i]];
+            const r = v / 100;
+            finalA += d.acid * r;
+            finalS += d.sweet * r;
+            finalB += d.body * r;
+            finalAr += d.aroma * r;
+            totalSug += d.sugar * r;
+        });
+
+        // 残糖与酒精计算
+        const resSugar = totalSug * (1 - ferment);
+        const abv = (totalSug - resSugar) / 17;
+        const displaySweet = finalS * (1 - ferment);
+
+        document.getElementById('abv-val').innerText = `预估酒精: ${abv.toFixed(1)}%`;
+        document.getElementById('sugar-val').innerText = `残糖: ${resSugar.toFixed(1)} g/L`;
+
+        // 风味描述逻辑
+        let desc = "🔍 混合画像：";
+        if (ratios[0] > 10) desc += "由于加入了海棠果，口感带有明显的”野生单宁质感“，适合品鉴。";
+        if (finalA > 7) desc += "酸度非常霸气，让人口口齿。";
+        desc += finalAr > 0.6 ? " 整体风味偏向”甜熟苹果与奶油“的浓郁风格。" : " 整体呈现出“青草与花果”的清凉感。";
+
+        document.getElementById('flavor-desc').innerHTML = desc;
+
+        updateChart([finalA, displaySweet, finalB, finalAr * 10, abv * 2]);
+    }
+
+    function updateChart(data) {
+        const ctx = document.getElementById('radarChart');
         if (chart) {
-            chart.data.datasets[0].data = dataValues;
+            chart.data.datasets[0].data = data;
             chart.update();
         } else {
             chart = new Chart(ctx, {
                 type: 'radar',
                 data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '风味剖面 (0-10)',
-                        data: dataValues,
-                        backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                        borderColor: '#4CAF50',
-                        pointBackgroundColor: '#2d5a27'
-                    }]
+                    labels: ['酸度强度', '残留甜度', '单宁/酒体', '香气深度', '酒精感'],
+                    datasets: [{ label: '混合风味指纹', data: data, backgroundColor: 'rgba(76,175,80,0.2)', borderColor: '#4CAF50' }]
                 },
-                options: {
-                    scales: { r: { min: 0, max: 10, ticks: { display: false } } }
-                }
+                options: { scales: { r: { min: 0, max: 10 } }, plugins: { legend: { display: false } } }
             });
         }
     }
 
-    document.addEventListener('input', update);
-    update();
+    document.querySelectorAll('.apple-slider').forEach(s => s.addEventListener('input', handleSlider));
+    document.getElementById('ferment-depth').addEventListener('input', updateUI);
+    updateUI();
 </script>
+
 </body>
 </html>
